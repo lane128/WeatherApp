@@ -7,7 +7,11 @@
 //
 
 #import "ViewController.h"
+#import "AFNetworking/AFNetworking.h"
 @import CoreLocation;
+
+#define WEATHER_REQUEST_URL @"http://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f"
+
 
 @interface ViewController()<CLLocationManagerDelegate>
 @property (strong ,nonatomic) CLLocationManager *locationManager;
@@ -41,15 +45,30 @@
 
 - (void) locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations{
     CLLocation *theLocation=locations[locations.count-1];
-    NSLog(@"%f",theLocation.horizontalAccuracy);
     if (theLocation.horizontalAccuracy>0) {
         NSLog(@"%f   %f",theLocation.coordinate.latitude,theLocation.coordinate.longitude);
+        [self updateWeatherInfo:theLocation.coordinate.latitude withLongitude:theLocation.coordinate.longitude];
         [self.locationManager stopUpdatingLocation];
     }
 }
 
--(void) locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error{
+- (void) locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error{
     NSLog(@"%@",error);
+}
+
+//add update weather info method
+- (void) updateWeatherInfo:(double)latitude withLongitude:(double)longtitude{
+    AFHTTPRequestOperationManager *netManager=[[AFHTTPRequestOperationManager alloc] init];
+    NSString *reqURL=[NSString stringWithFormat:WEATHER_REQUEST_URL,latitude,longtitude];
+    NSLog(@"%@",reqURL);
+    [netManager GET:reqURL parameters:nil success:
+     ^(AFHTTPRequestOperation *operation, id responseObject) {
+         NSDictionary *responseData=responseObject;
+         NSLog(@"%@",responseData);
+     }failure:
+     ^(AFHTTPRequestOperation *operation, NSError *error) {
+         NSLog(@"%@",error.description);
+     }];
 }
 
 //check the device system version
