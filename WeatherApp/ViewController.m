@@ -16,6 +16,9 @@
 @interface ViewController()<CLLocationManagerDelegate>
 @property (strong ,nonatomic) CLLocationManager *locationManager;
 @property (nonatomic) double systemVersion;
+@property (weak, nonatomic) IBOutlet UILabel *locationLabel;
+@property (weak, nonatomic) IBOutlet UILabel *temperatureLabel;
+@property (weak, nonatomic) IBOutlet UIImageView *weatherIcon;
 @end
 
 @implementation ViewController
@@ -56,7 +59,7 @@
     NSLog(@"%@",error);
 }
 
-//add update weather info method
+//add request weather info method
 - (void) updateWeatherInfo:(double)latitude withLongitude:(double)longtitude{
     AFHTTPRequestOperationManager *netManager=[[AFHTTPRequestOperationManager alloc] init];
     NSString *reqURL=[NSString stringWithFormat:WEATHER_REQUEST_URL,latitude,longtitude];
@@ -64,14 +67,88 @@
     [netManager GET:reqURL parameters:nil success:
      ^(AFHTTPRequestOperation *operation, id responseObject) {
          NSDictionary *responseData=responseObject;
-         NSLog(@"%@",responseData);
+         //update weather info.
+         [self bindWeatherInfo:responseData];
      }failure:
      ^(AFHTTPRequestOperation *operation, NSError *error) {
          NSLog(@"%@",error.description);
      }];
 }
 
-//check the device system version
+//bind response weather data info to the view.
+- (void) bindWeatherInfo:(NSDictionary *) data{
+    NSMutableString *countryInfo;
+    int tempDoubleType;
+    //bind temperatureLabel
+    if (data[@"main"]!=NULL&&data[@"main"][@"temp"]!=NULL) {
+        //check the country info (US use the F,others use C)
+        if (data[@"sys"]!=NULL&&data[@"sys"][@"country"]!=NULL) {
+            countryInfo=[NSMutableString stringWithFormat:@"%@",data[@"sys"][@"country"]];
+        }else{
+            countryInfo=[NSMutableString stringWithFormat:@"%@",@"N/A"];
+        }
+        tempDoubleType=[data[@"main"][@"temp"] doubleValue];
+        if ([countryInfo isEqual:@"US"]) {
+            tempDoubleType=round(((tempDoubleType-273.15)*1.8)+32);
+            self.temperatureLabel.text= [NSString stringWithFormat:@"%i°F",tempDoubleType];
+        }else{
+            tempDoubleType=round(tempDoubleType-273.15);
+            self.temperatureLabel.text= [NSString stringWithFormat:@"%i°C",tempDoubleType];
+        }
+    }else{
+        self.temperatureLabel.text= @"N/A";
+    }
+    //bind locatioinLabel
+    if (data[@"name"]!=NULL) {
+        self.locationLabel.text=[NSString stringWithFormat:@"%@",data[@"name"]];
+    }else{
+        self.locationLabel.text=@"N/A";
+    }
+    
+    //bind image icon of weather
+    int weatherId=0;
+    if (data[@"sys"]!=NULL&&data[@"sys"][@"id"]) {
+        weatherId=[data[@"sys"][@"id"] intValue];
+        [self bindWeatherIcon:weatherId];
+    }
+    //check the weather is sunset or sunrise
+    BOOL isNight=false;
+    NSDate *nowTime=[[NSDate alloc] init];
+    int secFrom1970=round([nowTime timeIntervalSince1970]);
+    if (data[@"sys"]!=NULL&&data[@"sys"][@"sunrise"]&&data[@"sys"][@"sunset"]) {
+        int sunriseSec=round([data[@"sys"][@"sunrise"] integerValue]);
+        int sunsetSec=round([data[@"sys"][@"sunset"] integerValue]);
+        if (secFrom1970<sunriseSec||secFrom1970>sunsetSec) {
+            isNight=true;
+            self.view.backgroundColor=[UIColor colorWithRed:130 green:147 blue:162 alpha:1];
+        }else{
+            self.view.backgroundColor=[UIColor colorWithRed:129 green:212 blue:250 alpha:1];
+        }
+    }
+    
+    
+}
+
+//check the kind of weather and bind icon method
+- (void) bindWeatherIcon:(int) weatherId{
+    if (weatherId<300) {
+        self.weatherIcon.image=[UIImage imageNamed:@"thunder"];
+    }else if (weatherId<400){
+        self.weatherIcon.image=[UIImage imageNamed:@"showder"];
+    }else if (weatherId<600){
+        self.weatherIcon.image=[UIImage imageNamed:@"rain"];
+    }else if (weatherId<700){
+        self.weatherIcon.image=[UIImage imageNamed:@"snow"];
+    }else if (weatherId<800){
+        self.weatherIcon.image=[UIImage imageNamed:@"cloud"];
+    }else if (weatherId<900){
+        self.weatherIcon.image=[UIImage imageNamed:@"cloud"];
+    }else{
+        //some weather I don't have Icon....(to do...)
+    }
+}
+
+//check the device system version method
 - (BOOL) isIOS8{
     UIDevice *myDevice=[UIDevice currentDevice];
     self.systemVersion=[myDevice.systemVersion doubleValue];
