@@ -11,6 +11,11 @@
 @import CoreLocation;
 
 #define WEATHER_REQUEST_URL @"http://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f"
+#define UIColorFromRGB(rgbValue) \
+[UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 \
+green:((float)((rgbValue & 0x00FF00) >>  8))/255.0 \
+blue:((float)((rgbValue & 0x0000FF) >>  0))/255.0 \
+alpha:1.0]
 
 
 @interface ViewController()<CLLocationManagerDelegate>
@@ -120,9 +125,9 @@
         int sunsetSec=round([data[@"sys"][@"sunset"] integerValue]);
         if (secFrom1970<sunriseSec||secFrom1970>sunsetSec) {
             isNight=true;
-            self.view.backgroundColor=[UIColor colorWithRed:130 green:147 blue:162 alpha:1];
+            self.view.backgroundColor=UIColorFromRGB(0x9999CC);
         }else{
-            self.view.backgroundColor=[UIColor colorWithRed:129 green:212 blue:250 alpha:1];
+            self.view.backgroundColor=UIColorFromRGB(0x3399FF);
         }
     }
     
