@@ -15,7 +15,7 @@
 [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 \
 green:((float)((rgbValue & 0x00FF00) >>  8))/255.0 \
 blue:((float)((rgbValue & 0x0000FF) >>  0))/255.0 \
-alpha:1.0]
+alpha:0.6]
 
 
 @interface ViewController()<CLLocationManagerDelegate>
@@ -24,11 +24,15 @@ alpha:1.0]
 @property (weak, nonatomic) IBOutlet UILabel *locationLabel;
 @property (weak, nonatomic) IBOutlet UILabel *temperatureLabel;
 @property (weak, nonatomic) IBOutlet UIImageView *weatherIcon;
+@property (weak, nonatomic) IBOutlet UIActivityIndicatorView *loadingIcon;
+
 @end
 
 @implementation ViewController
 - (void)viewDidLoad {
     [super viewDidLoad];
+    self.loadingIcon.hidden=true;
+    self.view.backgroundColor=[UIColor colorWithPatternImage:[UIImage imageNamed:@"day"]];
     
     //init the locationManager and set the accuracy
     self.locationManager=[[CLLocationManager alloc] init];
@@ -42,13 +46,25 @@ alpha:1.0]
     if ([self isIOS8]) {
         [self.locationManager requestAlwaysAuthorization];
     }
-    [self.locationManager startUpdatingLocation];
     
+    //set the activity indicator style
+    self.loadingIcon.activityIndicatorViewStyle=UIActivityIndicatorViewStyleWhiteLarge;
+    
+    [self reFresh];
 }
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
+}
+- (IBAction)reFreshData:(id)sender {
+    [self reFresh];
+}
+
+- (void) reFresh{
+    [self.locationManager startUpdatingLocation];
+    self.loadingIcon.hidden=false;
+    [self.loadingIcon startAnimating];
 }
 
 - (void) locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations{
@@ -114,7 +130,19 @@ alpha:1.0]
     int weatherId=0;
     if (data[@"sys"]!=NULL&&data[@"sys"][@"id"]) {
         weatherId=[data[@"sys"][@"id"] intValue];
+        //stop the indicator
+        [self.loadingIcon stopAnimating];
+        //use animation to change the weather icon
+        self.weatherIcon.hidden=true;
+        self.loadingIcon.hidden=true;
         [self bindWeatherIcon:weatherId];
+        
+        [UIView transitionWithView:self.weatherIcon duration:1.5 options:UIViewAnimationOptionTransitionFlipFromLeft animations:^{
+            self.weatherIcon.hidden=false;
+            
+        } completion:nil];
+        
+        
     }
     //check the weather is sunset or sunrise
     BOOL isNight=false;
@@ -125,9 +153,9 @@ alpha:1.0]
         int sunsetSec=round([data[@"sys"][@"sunset"] integerValue]);
         if (secFrom1970<sunriseSec||secFrom1970>sunsetSec) {
             isNight=true;
-            self.view.backgroundColor=UIColorFromRGB(0x9999CC);
+            self.view.backgroundColor=[UIColor colorWithPatternImage:[UIImage imageNamed:@"night"]];
         }else{
-            self.view.backgroundColor=UIColorFromRGB(0x3399FF);
+            self.view.backgroundColor=[UIColor colorWithPatternImage:[UIImage imageNamed:@"day"]];
         }
     }
     
